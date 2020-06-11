@@ -2,6 +2,24 @@ import { Request, Response } from 'express';
 import knex from '../database/connection'
 
 class PointsController {
+
+  async index(req: Request, res: Response) {
+    const { city, uf, items } = req.query
+    const parsedItems = String(items)
+      .split(',')
+      .map( item => Number(item.trim()))
+
+    const points = await knex('points')
+      .join('point_items', 'points.id', '=', 'point_items.point_id')
+      .whereIn('point_items.item_id', parsedItems)
+      .where('points.city', String(city))
+      .where('points.uf', String(uf))
+      .distinct()
+      .select('points.*')
+
+    return res.status(200).json(points)
+  }
+
   async create(req: Request, res: Response) {
     const {
       image,
@@ -39,6 +57,8 @@ class PointsController {
     })
   
     await trx('point_items').insert(pointItems)
+
+    await trx.commit()
   
     return res.json({ id: point_id, ...point })
   }
